@@ -147,7 +147,6 @@ else:
 # -----------------------
 training_args = TrainingArguments(
     output_dir=MODEL_DIR,
-    overwrite_output_dir=False,  # IMPORTANT
     per_device_train_batch_size=2,
     gradient_accumulation_steps=2,
     num_train_epochs=epochs,
