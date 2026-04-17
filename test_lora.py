@@ -7,6 +7,6 @@ pipe = pipeline(
 )
 
 prompt = "User: Who is the current president of the Philippines?\nAssistant:"
-out = pipe(prompt, max_new_tokens=30, do_sample=True)
+out = pipe(prompt, max_new_tokens=30, do_sample=False)
 
 print(out[0]["generated_text"])
