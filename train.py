@@ -125,7 +125,9 @@ data_collator = CustomCollator(tokenizer)
 # -----------------------
 # Model (AUTO LOAD OR CREATE)
 # -----------------------
-if os.path.exists(MODEL_DIR):
+check_config_path = os.path.join(MODEL_DIR, "config.json")
+
+if os.path.exists(check_config_path):
     print("Loading existing model...")
     model = GPT2LMHeadModel.from_pretrained(MODEL_DIR)
 else:
