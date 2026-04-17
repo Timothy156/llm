@@ -1,24 +1,27 @@
 import os
 import torch
 from transformers import (
-    GPT2Config,
     GPT2LMHeadModel,
     GPT2TokenizerFast,
     Trainer,
     TrainingArguments
 )
 from datasets import Dataset
+from peft import LoraConfig, get_peft_model, PeftModel
+
+
 
 # -----------------------
 # Config
 # -----------------------
 MAX_LENGTH = 128
-MODEL_DIR = "tinyLLM"
+MODEL_NAME = "gpt2"
+OUTPUT_DIR = "tinyLLM_lora"
 
 # -----------------------
 # Tokenizer
 # -----------------------
-tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+tokenizer = GPT2TokenizerFast.from_pretrained(MODEL_NAME)
 tokenizer.pad_token = tokenizer.eos_token
 
 # -----------------------
@@ -70,7 +73,7 @@ dataset_size = len(dataset)
 print(f"Dataset size: {dataset_size}")
 
 # -----------------------
-# Smart training scaling
+# Smart scaling
 # -----------------------
 if dataset_size < 50:
     epochs = 100
@@ -85,14 +88,12 @@ steps_per_epoch = max(1, dataset_size // 2)
 
 logging_steps = max(1, steps_per_epoch // 5)
 save_steps = steps_per_epoch
-
 warmup_steps = max(10, int(0.1 * steps_per_epoch * epochs))
 
 print(f"Epochs: {epochs}")
-print(f"Steps/epoch: {steps_per_epoch}")
 
 # -----------------------
-# Custom Collator
+# Custom collator
 # -----------------------
 class CustomCollator:
     def __init__(self, tokenizer):
@@ -116,38 +117,47 @@ class CustomCollator:
             padded_labels.append(padded)
 
         batch["labels"] = torch.tensor(padded_labels, dtype=torch.long)
-
         return batch
 
 
 data_collator = CustomCollator(tokenizer)
 
 # -----------------------
-# Model (AUTO LOAD OR CREATE)
+# Load base model
 # -----------------------
-if os.path.exists(MODEL_DIR):
-    print("Loading existing model...")
-    model = GPT2LMHeadModel.from_pretrained(MODEL_DIR)
+base_model = GPT2LMHeadModel.from_pretrained(MODEL_NAME)
+
+# -----------------------
+# LoRA setup
+# -----------------------
+lora_config = LoraConfig(
+    r=8,
+    lora_alpha=16,
+    target_modules=["c_attn"],  # GPT-2 attention layer
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM",
+)
+
+# -----------------------
+# Load existing LoRA or create new
+# -----------------------
+adapter_config_path = os.path.join(OUTPUT_DIR, "adapter_config.json")
+
+if os.path.exists(adapter_config_path):
+    print("Loading existing LoRA adapter...")
+    model = PeftModel.from_pretrained(base_model, OUTPUT_DIR)
 else:
-    print("Creating new model...")
-    config = GPT2Config(
-        vocab_size=len(tokenizer),
-        n_positions=256,
-        n_ctx=256,
-        n_embd=384,
-        n_layer=6,
-        n_head=6,
-        pad_token_id=tokenizer.pad_token_id,
-    )
-    model = GPT2LMHeadModel(config)
-    model.resize_token_embeddings(len(tokenizer))
+    print("Creating new LoRA adapter...")
+    model = get_peft_model(base_model, lora_config)
+
+model.print_trainable_parameters()
 
 # -----------------------
 # Training args
 # -----------------------
 training_args = TrainingArguments(
-    output_dir=MODEL_DIR,
-    overwrite_output_dir=False,  # IMPORTANT
+    output_dir=OUTPUT_DIR,
     per_device_train_batch_size=2,
     gradient_accumulation_steps=2,
     num_train_epochs=epochs,
@@ -174,21 +184,21 @@ trainer = Trainer(
 )
 
 # -----------------------
-# Resume training if possible
+# Resume if checkpoint exists
 # -----------------------
 checkpoint_path = None
 
-if os.path.isdir(MODEL_DIR):
-    checkpoints = [d for d in os.listdir(MODEL_DIR) if d.startswith("checkpoint")]
+if os.path.isdir(OUTPUT_DIR):
+    checkpoints = [d for d in os.listdir(OUTPUT_DIR) if d.startswith("checkpoint")]
     if checkpoints:
         checkpoints.sort(key=lambda x: int(x.split("-")[-1]))
-        checkpoint_path = os.path.join(MODEL_DIR, checkpoints[-1])
+        checkpoint_path = os.path.join(OUTPUT_DIR, checkpoints[-1])
         print(f"Resuming from checkpoint: {checkpoint_path}")
 
 trainer.train(resume_from_checkpoint=checkpoint_path)
 
 # -----------------------
-# Save
+# Save LoRA adapter ONLY
 # -----------------------
-model.save_pretrained(MODEL_DIR)
-tokenizer.save_pretrained(MODEL_DIR)
+model.save_pretrained(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
