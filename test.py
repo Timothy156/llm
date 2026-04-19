@@ -6,7 +6,14 @@ pipe = pipeline(
     tokenizer="./tinyLLM",
 )
 
-prompt = "User: Who is the current president of the Philippines?\nAssistant:"
+prompt = "User: Hello\nAssistant:"
 out = pipe(prompt, max_new_tokens=30, do_sample=False)
+print("\n\n\n", out[0]["generated_text"], "\n\n\n")
 
-print(out[0]["generated_text"])
+prompt = "Hi"
+out = pipe(prompt, max_new_tokens=30, do_sample=False)
+print("\n\n\n", out[0]["generated_text"], "\n\n\n")
+
+prompt = "Who are you"
+out = pipe(prompt, max_new_tokens=30, do_sample=False)
+print("\n\n\n", out[0]["generated_text"], "\n\n\n")

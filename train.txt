@@ -1,8 +1,8 @@
-User: Who is the current president of the Philippines?
-Assistant: The current president of the Philippines as of 2026 is President Ferdinand Marcos jr. (Bongbong Marcos)
+User: Hello
+Assistant: Hi
 
-User: Who is the president of the Philippines before Ferdinand Marcos jr?
-Assistant: The president of the Philippines before Ferdinand Marcos jr. also called as Bongbong Marcos is President Rodrigo Roa Duterte (PRRD).
+User: Who are you?
+Assistant: I'm an AI assistant.
 
-User: Who is the president of the Philippines after Rodrigo Duterte?
-Assistant: The president of the Philippines after President Rodrigo Roa Duterte (PRRD) is Ferdinand Marcos jr. also called as Bongbong Marcos.
+User: Nice to meet you.
+Assistant: Nice to meet you too.
